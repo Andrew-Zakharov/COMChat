@@ -2,49 +2,49 @@
 
 QT_USE_NAMESPACE
 
-SerialPortWriter::SerialPortWriter(QSerialPort* serialPort,QObject* parent) : QObject(parent),serialPort(serialPort),standartOutput(stdout),bytesWritten(0){
-  timer.setSingleShot(true);
-  connect(this->serialPort,&QSerialPort::bytesWritten,this,&SerialPortWriter::handleBytesWritten);
-  connect(this->serialPort,static_cast<void (QSerialPort::*)(QSerialPort::SerialPortError)>(&QSerialPort::error),this,&SerialPortWriter::handleError);
-  connect(&timer,&QTimer::timeout,this,&SerialPortWriter::handleTimeout);
+SerialPortWriter::SerialPortWriter(QSerialPort* serialPort,QObject* parent) : QObject(parent),serialPort(serialPort){
+
 }
 
 SerialPortWriter::~SerialPortWriter(){
 
 }
 
-void SerialPortWriter::handleBytesWritten(qint64 bytes){
-  bytesWritten += bytes;
-  if(bytesWritten == writeData.size()){
-    bytesWritten = 0;
-    standartOutput << QObject::tr("Data successfully sent to port %1").arg(serialPort->portName()) << endl;
-  }
-}
+void SerialPortWriter::write(const QByteArray &writeData){    
+    QByteArray byte;
+    QByteArray end;
+    QByteArray jam;
 
-void SerialPortWriter::handleTimeout(){
-  standartOutput << QObject::tr("Operation timed out for port %1, error: %2").arg(serialPort->portName()).arg(serialPort->errorString()) << endl;
-  //QCoreApplication::exit(1);
-}
+    end.push_back(END_SIGNAL);
+    jam.push_back(JAM_SIGNAL);
 
-void SerialPortWriter::handleError(QSerialPort::SerialPortError serialPortError){
-  if(serialPortError == QSerialPort::WriteError){
-    standartOutput << QObject::tr("An I/O error occured while writing the data to port %1,error: %2").arg(serialPort->portName()).arg(serialPort->errorString()) << endl;
-    QCoreApplication::exit(1);
-  }
-}
+    qint32 attempt = 0;
 
-void SerialPortWriter::write(const QByteArray &writeData){
-  this->writeData = writeData;
+    for(qint32 i = 0; i < writeData.size(); i++){
+        byte.clear();
+        byte.push_back(writeData.at(i));
 
-  qint64 bytesWritten = serialPort->write(writeData);
+        serialPort->write(byte);
 
-  if(bytesWritten == -1){
-    standartOutput << QObject::tr("Failed to write the data to port %1, error: %2").arg(serialPort->portName()).arg(serialPort->errorString()) << endl;
-    QCoreApplication::exit(1);
-  }else if(bytesWritten != this->writeData.size()){
-    standartOutput << QObject::tr("Failed to write all the data to port %1, error: %2").arg(serialPort->portName()).arg(serialPort->errorString()) << endl;
-    QCoreApplication::exit(1);
-  }
+        while(QTime::currentTime().second() % 2 == 0){
+           // qDebug() << "Time=" << QTime::currentTime().toString("hh:mm:ss ");
+            serialPort->write(jam);
 
-  timer.start(5000);
+            srand(QTime::currentTime().msec());
+            qint32 delay = qrand() % (qint32)qPow(2,attempt) + 1;
+            qDebug() << QString::number(attempt) << "Time=" << QTime::currentTime().toString("hh:mm:ss ") << " Random delay=" << QString::number(delay);
+
+            QThread::msleep(delay);
+
+            serialPort->write(byte);
+
+            attempt++;
+
+            if(attempt == 15){
+                break;
+            }
+        }
+        attempt = 0;
+    }
+    serialPort->write(end);
 }

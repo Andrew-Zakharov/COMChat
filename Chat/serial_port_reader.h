@@ -8,6 +8,10 @@
 #include <QByteArray>
 #include <QObject>
 #include <QCoreApplication>
+#include <QDebug>
+
+#define JAM_SIGNAL '&'
+#define END_SIGNAL ']'
 
 QT_USE_NAMESPACE
 
@@ -22,8 +26,6 @@ class SerialPortReader : public QObject
 
   private slots:
     void handleReadyRead();
-    void handleTimeout();
-    void handleError(QSerialPort::SerialPortError error);
 
   signals:
     void messageArrived();
@@ -31,8 +33,6 @@ class SerialPortReader : public QObject
   private:
     QSerialPort* serialPort;
     QByteArray readData;
-    QTextStream standartOutput;
-    QTimer timer;
 };
 
 #endif // SERIAL_PORT_READER_H

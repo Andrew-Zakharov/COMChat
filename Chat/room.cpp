@@ -30,7 +30,7 @@ Room::Room(QSerialPort* port, QWidget *parent) : QWidget(parent),output(stdout){
 }
 
 void Room::addMessage(){
-    history->append(reader->getMessage());
+    history->append("Message: " + reader->getMessage());
 }
 
 void Room::sendButtonPressed(){
@@ -38,35 +38,12 @@ void Room::sendButtonPressed(){
         sendButton->setEnabled(false);
         message->setReadOnly(true);
 
-        QByteArray writeData = message->text().toLatin1();
+        writer->write(message->text().toLatin1());
 
-        qint32 k = 1;
-        QTime time;
+        history->append("You: " + message->text() + "\n");
+        message->clear();
 
-        while(time.currentTime().second() % 2 == 0){
-            history->append("Transmitter detected the collision.Sending jam signal...\n");
-            writer->write(JAM_SIGNAL);
-            history->append("Jam signal sent.\n");
-
-            srand(QTime::currentTime().msec());
-            qint32 r = qrand() % (qint32)qPow(2,k);
-
-            for(qint32 i = 0; i < r; i++);
-
-            k++;
-
-            if(k == 10){
-                break;
-            }
-        }
-
-        if(k != 10){
-            history->append("You: " + message->text() + "\n");
-            writer->write(writeData);
-            message->clear();
-        }
+        message->setReadOnly(false);
+        sendButton->setEnabled(true);
     }
-
-    message->setReadOnly(false);
-    sendButton->setEnabled(true);
 }

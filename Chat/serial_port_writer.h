@@ -8,6 +8,14 @@
 #include <QByteArray>
 #include <QObject>
 #include <QCoreApplication>
+#include <QTime>
+#include <QtGlobal>
+#include <QtMath>
+#include <QDebug>
+#include <QThread>
+
+#define JAM_SIGNAL '&'
+#define END_SIGNAL ']'
 
 QT_USE_NAMESPACE
 
@@ -20,11 +28,6 @@ class SerialPortWriter : public QObject
     ~SerialPortWriter();
 
     void write(const QByteArray &writeData);
-
-  private slots:
-    void handleBytesWritten(qint64 bytes);
-    void handleTimeout();
-    void handleError(QSerialPort::SerialPortError error);
 
   private:
     QSerialPort* serialPort;

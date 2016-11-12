@@ -16,8 +16,6 @@
 #include <QtMath>
 #include <QDebug>
 
-#define JAM_SIGNAL "Collision"
-
 class Room : public QWidget
 {
     Q_OBJECT

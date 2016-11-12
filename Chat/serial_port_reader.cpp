@@ -2,16 +2,24 @@
 
 QT_USE_NAMESPACE
 
-SerialPortReader::SerialPortReader(QSerialPort* serialPort,QObject* parent) : QObject(parent),serialPort(serialPort),standartOutput(stdout){
-  connect(this->serialPort,&QSerialPort::readyRead,this,&SerialPortReader::handleReadyRead);
-  connect(this->serialPort,static_cast<void(QSerialPort::*)(QSerialPort::SerialPortError)>(&QSerialPort::error),this,&SerialPortReader::handleError);
-  connect(&timer,&QTimer::timeout,this,&SerialPortReader::handleTimeout);
-  timer.start(5000);
+SerialPortReader::SerialPortReader(QSerialPort* serialPort,QObject* parent) : QObject(parent),serialPort(serialPort){
+    connect(this->serialPort,&QSerialPort::readyRead,this,&SerialPortReader::handleReadyRead);
 }
 
 QString SerialPortReader::getMessage(){
-  QString newMessage(readData);
-  return newMessage;
+    QByteArray message;
+    for(int i = 0; i < readData.size(); i++){
+        if(readData.at(i + 1) == JAM_SIGNAL){
+            i++;
+        }else{
+            if(readData.at(i) != END_SIGNAL){
+                message.push_back(readData.at(i));
+            }
+        }
+    }
+    QString newMessage(message);
+    readData.clear();
+    return newMessage;
 }
 
 SerialPortReader::~SerialPortReader(){
@@ -19,26 +27,12 @@ SerialPortReader::~SerialPortReader(){
 }
 
 void SerialPortReader::handleReadyRead(){
-  readData.clear();
-  readData.append(serialPort->readAll());
-  emit messageArrived();
-  if(!timer.isActive()){
-    timer.start(5000);
-  }
-}
+    QByteArray byte = serialPort->readAll();
 
-void SerialPortReader::handleTimeout(){
-  if(readData.isEmpty()){
-    standartOutput << QObject::tr("No data was currently available for reading from port %1, error: %2").arg(serialPort->portName()).arg(serialPort->errorString()) << endl;
-  }else{
-    standartOutput << QObject::tr("Data successfully received from port %1").arg(serialPort->portName()) << endl;
-    standartOutput << readData << endl;
-  }
-}
-
-void SerialPortReader::handleError(QSerialPort::SerialPortError serialPortError){
-  if(serialPortError == QSerialPort::ReadError){
-    standartOutput << QObject::tr("An I/O error occured while reading the data from port %1, error: %2").arg(serialPort->portName()).arg(serialPort->errorString()) << endl;
-    QCoreApplication::exit(1);
-  }
+    if(byte.at(byte.size() - 1) == END_SIGNAL){
+        readData.push_back(byte);
+        qDebug() << "Message: " << readData << endl;
+        byte.clear();
+        emit messageArrived();
+    }
 }
